@@ -6,7 +6,6 @@ Infrastructure as Code pour un serveur bare metal Scaleway (Debian 13, Docker, T
 
 - [Terraform](https://developer.hashicorp.com/terraform/install) >= 1.5
 - [Ansible](https://docs.ansible.com/ansible/latest/installation_guide/) >= 2.14
-- [scw CLI](https://www.scaleway.com/en/cli/) (pour `make reinstall` uniquement)
 - Un serveur bare metal Scaleway existant (EM-A116X-SSD, fr-par-2)
 - Un domaine avec accès aux DNS
 
@@ -57,7 +56,7 @@ Remplacer `<YOUR_SERVER_IP>` par l'IP du serveur (`make provision` affiche `serv
 **Variables secrètes (vault) :**
 
 ```bash
-cp ansible/group_vars/vault.yml.example ansible/group_vars/vault.yml
+cp ansible/group_vars/all/vault.yml.example ansible/group_vars/all/vault.yml
 ```
 
 Renseigner `traefik_dashboard_users` avec un hash htpasswd :
@@ -69,7 +68,7 @@ htpasswd -nb admin <MON_MOT_DE_PASSE>
 Chiffrer le fichier :
 
 ```bash
-ansible-vault encrypt ansible/group_vars/vault.yml
+ansible-vault encrypt ansible/group_vars/all/vault.yml
 ```
 
 **Déploiement :**
@@ -99,17 +98,6 @@ make provision   # applique Terraform
 make configure   # lance le playbook Ansible
 make deploy      # plan + provision + configure
 make ping        # vérifie la connectivité Ansible
-make reinstall   # réinstalle l'OS (confirmation requise, données effacées)
-```
-
-## Réinstallation OS
-
-Pour remettre le serveur à zéro sans changer d'IP ni de facturation :
-
-```bash
-make reinstall   # demande confirmation "REINSTALL"
-# ~15-20 min, puis :
-make configure
 ```
 
 ## Fichiers secrets (jamais commités)
@@ -119,4 +107,4 @@ make configure
 | `terraform/secret.tfvars` | Clés API Scaleway, IDs |
 | `terraform/terraform.tfvars` | IDs OS, zone |
 | `ansible/inventory.ini` | IP du serveur |
-| `ansible/group_vars/vault.yml` | Hash htpasswd Traefik |
+| `ansible/group_vars/all/vault.yml` | Hash htpasswd Traefik |
