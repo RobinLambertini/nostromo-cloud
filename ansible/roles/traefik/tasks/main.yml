@@ -1,0 +1,44 @@
+---
+- name: Create Traefik directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: nostromo
+    group: nostromo
+    mode: '0755'
+  loop:
+    - /home/nostromo/apps/traefik
+    - /home/nostromo/data/traefik
+
+- name: Create acme.json (stockage certificats Let's Encrypt)
+  copy:
+    content: ""
+    dest: /home/nostromo/data/traefik/acme.json
+    owner: nostromo
+    group: nostromo
+    mode: '0600'
+    force: false
+
+- name: Deploy Traefik docker-compose
+  template:
+    src: docker-compose.yml.j2
+    dest: /home/nostromo/apps/traefik/docker-compose.yml
+    owner: nostromo
+    group: nostromo
+    mode: '0644'
+  notify: Restart Traefik
+
+- name: Create Traefik Docker network
+  command: docker network create traefik_public
+  register: network_result
+  changed_when: network_result.rc == 0
+  failed_when:
+    - network_result.rc != 0
+    - "'already exists' not in network_result.stderr"
+
+- name: Start Traefik
+  command: docker compose up -d
+  args:
+    chdir: /home/nostromo/apps/traefik
+  register: compose_result
+  changed_when: "'Started' in compose_result.stdout or 'Created' in compose_result.stdout"

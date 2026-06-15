@@ -1,0 +1,20 @@
+services:
+  dockhand:
+    image: fnsys/dockhand:latest
+    container_name: dockhand
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /home/nostromo/data/dockhand:/app/data
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dockhand.rule=Host(`stacks.{{ traefik_domain }}`)"
+      - "traefik.http.routers.dockhand.entrypoints=websecure"
+      - "traefik.http.routers.dockhand.tls.certresolver=letsencrypt"
+      - "traefik.http.services.dockhand.loadbalancer.server.port=3000"
+    networks:
+      - traefik_public
+
+networks:
+  traefik_public:
+    external: true

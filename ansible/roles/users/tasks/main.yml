@@ -1,0 +1,50 @@
+---
+- name: Create user nostromo
+  user:
+    name: nostromo
+    shell: /bin/bash
+    create_home: true
+    state: present
+
+- name: Add nostromo to sudo and docker groups
+  user:
+    name: nostromo
+    groups:
+      - sudo
+      - docker
+    append: true
+
+- name: Create .ssh directory for nostromo
+  file:
+    path: /home/nostromo/.ssh
+    state: directory
+    owner: nostromo
+    group: nostromo
+    mode: '0700'
+
+- name: Copy authorized_keys from root to nostromo
+  copy:
+    remote_src: true
+    src: /root/.ssh/authorized_keys
+    dest: /home/nostromo/.ssh/authorized_keys
+    owner: nostromo
+    group: nostromo
+    mode: '0600'
+
+- name: Allow nostromo passwordless sudo
+  copy:
+    content: "nostromo ALL=(ALL) NOPASSWD:ALL\n"
+    dest: /etc/sudoers.d/nostromo
+    mode: '0440'
+    validate: 'visudo -cf %s'
+
+- name: Create base directory structure
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: nostromo
+    group: nostromo
+    mode: '0755'
+  loop:
+    - /home/nostromo/apps
+    - /home/nostromo/data

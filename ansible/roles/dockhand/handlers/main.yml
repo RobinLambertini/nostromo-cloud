@@ -1,0 +1,5 @@
+---
+- name: Restart Dockhand
+  command: docker compose up -d
+  args:
+    chdir: /opt/dockhand

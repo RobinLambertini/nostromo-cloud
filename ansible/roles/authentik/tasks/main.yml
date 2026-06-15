@@ -1,0 +1,65 @@
+---
+- name: Create Authentik app directory
+  file:
+    path: /home/nostromo/apps/authentik
+    state: directory
+    owner: nostromo
+    group: nostromo
+    mode: '0755'
+
+- name: Create Authentik data directories (owner UID 1000 = user interne du container)
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: '1000'
+    group: '1000'
+    mode: '0755'
+  loop:
+    - /home/nostromo/data/authentik/postgres
+    - /home/nostromo/data/authentik/media
+    - /home/nostromo/data/authentik/certs
+    - /home/nostromo/data/authentik/templates
+
+- name: Check if .env exists
+  stat:
+    path: /home/nostromo/apps/authentik/.env
+  register: authentik_env_stat
+
+- name: Generate PostgreSQL password
+  shell: openssl rand -hex 24
+  register: _pg_pass_raw
+  when: not authentik_env_stat.stat.exists
+  changed_when: false
+
+- name: Generate Authentik secret key
+  shell: openssl rand -base64 60 | tr -d '\n'
+  register: _secret_key_raw
+  when: not authentik_env_stat.stat.exists
+  changed_when: false
+
+- name: Write .env file
+  copy:
+    content: |
+      PG_PASS={{ _pg_pass_raw.stdout }}
+      AUTHENTIK_SECRET_KEY={{ _secret_key_raw.stdout }}
+    dest: /home/nostromo/apps/authentik/.env
+    owner: nostromo
+    group: nostromo
+    mode: '0600'
+  when: not authentik_env_stat.stat.exists
+
+- name: Deploy Authentik docker-compose
+  template:
+    src: docker-compose.yml.j2
+    dest: /home/nostromo/apps/authentik/docker-compose.yml
+    owner: nostromo
+    group: nostromo
+    mode: '0644'
+  notify: Restart Authentik
+
+- name: Start Authentik
+  command: docker compose up -d
+  args:
+    chdir: /home/nostromo/apps/authentik
+  register: compose_result
+  changed_when: "'Started' in compose_result.stdout or 'Created' in compose_result.stdout"

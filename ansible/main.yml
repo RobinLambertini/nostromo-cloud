@@ -1,0 +1,12 @@
+---
+- name: Configure nostromo-cloud
+  hosts: nostromo
+  become: true
+  roles:
+    - hardening
+    - docker
+    - users
+    - fail2ban
+    - traefik
+    - dockhand
+    - authentik

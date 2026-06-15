@@ -1,0 +1,4 @@
+# Copier ce fichier en vault.yml et chiffrer avec : ansible-vault encrypt vault.yml
+# Générer le hash htpasswd : htpasswd -nb admin <MON_MOT_DE_PASSE>
+
+traefik_dashboard_users: "admin:<HTPASSWD_HASH>"

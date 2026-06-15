@@ -1,0 +1,27 @@
+---
+- name: Create Dockhand directories
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: nostromo
+    group: nostromo
+    mode: '0755'
+  loop:
+    - /home/nostromo/apps/dockhand
+    - /home/nostromo/data/dockhand
+
+- name: Deploy Dockhand docker-compose
+  template:
+    src: docker-compose.yml.j2
+    dest: /home/nostromo/apps/dockhand/docker-compose.yml
+    owner: nostromo
+    group: nostromo
+    mode: '0644'
+  notify: Restart Dockhand
+
+- name: Start Dockhand
+  command: docker compose up -d
+  args:
+    chdir: /home/nostromo/apps/dockhand
+  register: compose_result
+  changed_when: "'Started' in compose_result.stdout or 'Created' in compose_result.stdout"

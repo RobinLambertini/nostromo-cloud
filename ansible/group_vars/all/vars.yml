@@ -1,0 +1,10 @@
+---
+# Email utilisé par Let's Encrypt pour les notifications de certificats
+traefik_acme_email: "lambertini.robin@gmail.com"
+
+# Votre domaine principal (ex: mondomaine.com)
+# Le dashboard Traefik sera accessible sur traefik.{{ traefik_domain }}
+traefik_domain: "lambertini.space"
+
+# Authentification dashboard Traefik : voir ansible/group_vars/vault.yml (ansible-vault)
+# traefik_dashboard_users est défini dans vault.yml (gitignored)
