@@ -31,6 +31,11 @@ variable "debian_13_os_id" {
   description = "L'UUID de l'OS Debian 13 (Trixie)"
 }
 
+variable "proxmox_debian_13_id" {
+  type        = string
+  description = "L'UUID de l'OS Proxmox à base de Debian 13 (Trixie)"
+}
+
 variable "scw_access_key" {
   type      = string
   sensitive = true
