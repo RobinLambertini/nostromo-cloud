@@ -31,6 +31,15 @@
     port: "443"
     proto: tcp
 
+- name: Allow DNS (acme-dns, challenges Let's Encrypt)
+  ufw:
+    rule: allow
+    port: "53"
+    proto: "{{ item }}"
+  loop:
+    - udp
+    - tcp
+
 - name: Enable UFW
   ufw:
     state: enabled

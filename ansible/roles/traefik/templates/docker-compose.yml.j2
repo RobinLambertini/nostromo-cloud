@@ -3,12 +3,18 @@ services:
     image: traefik:v3.7.4
     container_name: traefik
     restart: unless-stopped
+    depends_on:
+      - acme-dns
+    environment:
+      ACME_DNS_API_BASE: http://acme-dns
+      ACME_DNS_STORAGE_PATH: /acme-dns/accounts.json
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - /home/nostromo/data/traefik/acme.json:/acme.json
+      - /home/nostromo/data/traefik/acme-dns:/acme-dns
     command:
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
@@ -21,6 +27,11 @@ services:
       - --certificatesresolvers.letsencrypt.acme.storage=/acme.json
       - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
       - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+      # Challenge DNS-01 via acme-dns : seul moyen d'obtenir des certificats wildcard (ex. *.coder.<domain>)
+      - --certificatesresolvers.letsencrypt-dns.acme.email={{ traefik_acme_email }}
+      - --certificatesresolvers.letsencrypt-dns.acme.storage=/acme.json
+      - --certificatesresolvers.letsencrypt-dns.acme.dnschallenge.provider=acme-dns
+      - --certificatesresolvers.letsencrypt-dns.acme.dnschallenge.resolvers=1.1.1.1:53,8.8.8.8:53
       - --api.dashboard=true
       - --log.level=INFO
       - --accesslog=true
@@ -32,6 +43,21 @@ services:
       - "traefik.http.routers.traefik-dashboard.service=api@internal"
       - "traefik.http.routers.traefik-dashboard.middlewares=traefik-auth"
       - "traefik.http.middlewares.traefik-auth.basicauth.users={{ traefik_dashboard_users | replace('$', '$$') }}"
+    networks:
+      - traefik_public
+
+  # Serveur DNS autoritaire pour acme.<domain> : ne sert que les TXT des challenges Let's Encrypt
+  # Son API (port 80) n'est joignable que depuis le réseau Docker
+  acme-dns:
+    image: joohoi/acme-dns:v1.0
+    container_name: acme-dns
+    restart: unless-stopped
+    ports:
+      - "{{ ansible_default_ipv4.address }}:53:53/udp"
+      - "{{ ansible_default_ipv4.address }}:53:53/tcp"
+    volumes:
+      - /home/nostromo/apps/traefik/acme-dns.cfg:/etc/acme-dns/config.cfg:ro
+      - /home/nostromo/data/acme-dns:/var/lib/acme-dns
     networks:
       - traefik_public
 

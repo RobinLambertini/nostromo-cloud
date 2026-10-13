@@ -9,6 +9,8 @@
   loop:
     - /home/nostromo/apps/traefik
     - /home/nostromo/data/traefik
+    - /home/nostromo/data/traefik/acme-dns
+    - /home/nostromo/data/acme-dns
 
 - name: Create acme.json (stockage certificats Let's Encrypt)
   copy:
@@ -18,6 +20,15 @@
     group: nostromo
     mode: '0600'
     force: false
+
+- name: Deploy acme-dns config
+  template:
+    src: acme-dns.cfg.j2
+    dest: /home/nostromo/apps/traefik/acme-dns.cfg
+    owner: nostromo
+    group: nostromo
+    mode: '0644'
+  notify: Restart acme-dns
 
 - name: Deploy Traefik docker-compose
   template:

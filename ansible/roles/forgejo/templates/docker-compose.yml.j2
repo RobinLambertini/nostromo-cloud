@@ -1,0 +1,50 @@
+services:
+  forgejo:
+    image: codeberg.org/forgejo/forgejo:16.0.5-rootless
+    container_name: forgejo
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      FORGEJO__server__DOMAIN: git.{{ traefik_domain }}
+      FORGEJO__server__ROOT_URL: https://git.{{ traefik_domain }}/
+      FORGEJO__server__HTTP_PORT: 3000
+      # Git en HTTPS uniquement (clone/push avec un token d'accès)
+      FORGEJO__server__DISABLE_SSH: "true"
+      FORGEJO__server__START_SSH_SERVER: "false"
+      FORGEJO__database__DB_TYPE: sqlite3
+      FORGEJO__security__INSTALL_LOCK: "true"
+      FORGEJO__security__REVERSE_PROXY_LIMIT: 1
+      FORGEJO__security__REVERSE_PROXY_TRUSTED_PROXIES: {{ traefik_public_subnet }}
+      # Inscriptions fermées, sauf via un fournisseur externe (Pocket ID)
+      FORGEJO__service__DISABLE_REGISTRATION: "false"
+      FORGEJO__service__ALLOW_ONLY_EXTERNAL_REGISTRATION: "true"
+      # Comptes créés automatiquement à la première connexion Pocket ID
+      # (un compte local existant avec le même nom/email est lié après saisie de son mot de passe)
+      FORGEJO__oauth2_client__ENABLE_AUTO_REGISTRATION: "true"
+      FORGEJO__oauth2_client__USERNAME: nickname
+      FORGEJO__oauth2_client__ACCOUNT_LINKING: login
+      FORGEJO__oauth2_client__UPDATE_AVATAR: "true"
+      FORGEJO__openid__ENABLE_OPENID_SIGNIN: "false"
+      FORGEJO__openid__ENABLE_OPENID_SIGNUP: "false"
+      FORGEJO__repository__DEFAULT_PRIVATE: private
+    volumes:
+      - /home/nostromo/data/forgejo:/var/lib/gitea
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:3000/api/healthz"]
+      interval: 1m
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.forgejo.rule=Host(`git.{{ traefik_domain }}`)"
+      - "traefik.http.routers.forgejo.entrypoints=websecure"
+      - "traefik.http.routers.forgejo.tls.certresolver=letsencrypt"
+      - "traefik.http.services.forgejo.loadbalancer.server.port=3000"
+    networks:
+      - traefik_public
+
+networks:
+  traefik_public:
+    external: true

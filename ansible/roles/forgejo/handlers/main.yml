@@ -1,0 +1,5 @@
+---
+- name: Restart Forgejo
+  command: docker compose up -d
+  args:
+    chdir: /home/nostromo/apps/forgejo

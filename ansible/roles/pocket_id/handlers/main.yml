@@ -1,0 +1,5 @@
+---
+- name: Restart Pocket ID
+  command: docker compose up -d
+  args:
+    chdir: /home/nostromo/apps/pocket-id

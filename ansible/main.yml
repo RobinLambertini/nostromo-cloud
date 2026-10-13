@@ -9,4 +9,5 @@
     - fail2ban
     - traefik
     - dockhand
-    - authentik
+    - pocket_id
+    - forgejo

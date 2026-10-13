@@ -2,3 +2,14 @@
 # Générer le hash htpasswd : htpasswd -nb admin <MON_MOT_DE_PASSE>
 
 traefik_dashboard_users: "admin:<HTPASSWD_HASH>"
+
+# Compte admin Forgejo (créé par Ansible au premier déploiement)
+# Attention : "admin" est un nom réservé par Forgejo
+forgejo_admin_username: "<ADMIN_USERNAME>"
+forgejo_admin_email: "<ADMIN_EMAIL>"
+forgejo_admin_password: "<ADMIN_PASSWORD>"
+
+# SSO Forgejo <-> Pocket ID (optionnel) : client OIDC « Forgejo » créé dans Pocket ID
+# Callback URL : https://git.<domain>/user/oauth2/pocket-id/callback
+forgejo_oidc_client_id: "<POCKET_ID_CLIENT_ID>"
+forgejo_oidc_client_secret: "<POCKET_ID_CLIENT_SECRET>"

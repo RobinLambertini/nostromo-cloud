@@ -3,3 +3,8 @@
   command: docker compose up -d
   args:
     chdir: /home/nostromo/apps/traefik
+
+- name: Restart acme-dns
+  command: docker compose restart acme-dns
+  args:
+    chdir: /home/nostromo/apps/traefik

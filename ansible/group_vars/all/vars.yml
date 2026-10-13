@@ -8,3 +8,7 @@ traefik_domain: "lambertini.space"
 
 # Authentification dashboard Traefik : voir ansible/group_vars/vault.yml (ansible-vault)
 # traefik_dashboard_users est défini dans vault.yml (gitignored)
+
+# Groupe Pocket ID dont les membres sont admins de Forgejo : champ « Name » du groupe (minuscules), pas le « Friendly Name » affiché
+# Qui peut se connecter à Forgejo se règle dans Pocket ID : onglet « Access » du client OIDC « Forgejo »
+forgejo_oidc_admin_group: "devsecops"

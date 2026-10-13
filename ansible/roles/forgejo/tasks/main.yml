@@ -1,0 +1,147 @@
+---
+- name: Check Forgejo admin vars (définies dans vault.yml)
+  assert:
+    that:
+      - forgejo_admin_username is defined
+      - forgejo_admin_email is defined
+      - forgejo_admin_password is defined
+    fail_msg: "Définir forgejo_admin_username, forgejo_admin_email et forgejo_admin_password dans group_vars/all/vault.yml"
+    quiet: true
+
+- name: Create Forgejo app directory
+  file:
+    path: /home/nostromo/apps/forgejo
+    state: directory
+    owner: nostromo
+    group: nostromo
+    mode: '0755'
+
+- name: Create Forgejo data directory (owner UID 1000 = user git du container rootless)
+  file:
+    path: /home/nostromo/data/forgejo
+    state: directory
+    owner: '1000'
+    group: '1000'
+    mode: '0755'
+
+- name: Check if .env exists
+  stat:
+    path: /home/nostromo/apps/forgejo/.env
+  register: forgejo_env_stat
+
+- name: Generate Forgejo secret key
+  shell: openssl rand -hex 32
+  register: _forgejo_secret_key_raw
+  when: not forgejo_env_stat.stat.exists
+  changed_when: false
+
+- name: Write .env file
+  copy:
+    content: |
+      FORGEJO__security__SECRET_KEY={{ _forgejo_secret_key_raw.stdout }}
+    dest: /home/nostromo/apps/forgejo/.env
+    owner: nostromo
+    group: nostromo
+    mode: '0600'
+  when: not forgejo_env_stat.stat.exists
+
+- name: Get traefik_public subnet (pour REVERSE_PROXY_TRUSTED_PROXIES)
+  command: docker network inspect traefik_public -f "{% raw %}{{range .IPAM.Config}}{{.Subnet}}{{end}}{% endraw %}"
+  register: _traefik_subnet
+  changed_when: false
+
+- name: Deploy Forgejo docker-compose
+  template:
+    src: docker-compose.yml.j2
+    dest: /home/nostromo/apps/forgejo/docker-compose.yml
+    owner: nostromo
+    group: nostromo
+    mode: '0644'
+  vars:
+    traefik_public_subnet: "{{ _traefik_subnet.stdout }}"
+  notify: Restart Forgejo
+
+- name: Start Forgejo
+  command: docker compose up -d
+  args:
+    chdir: /home/nostromo/apps/forgejo
+  register: compose_result
+  changed_when: "'Started' in compose_result.stdout or 'Created' in compose_result.stdout"
+
+- name: Wait for Forgejo and list existing users
+  command: docker exec forgejo forgejo admin user list
+  register: _forgejo_users
+  retries: 20
+  delay: 3
+  until: _forgejo_users.rc == 0
+  changed_when: false
+
+- name: Create Forgejo admin user
+  command:
+    argv:
+      - docker
+      - exec
+      - forgejo
+      - forgejo
+      - admin
+      - user
+      - create
+      - --admin
+      - --username
+      - "{{ forgejo_admin_username }}"
+      - --email
+      - "{{ forgejo_admin_email }}"
+      - --password
+      - "{{ forgejo_admin_password }}"
+      - --must-change-password=false
+  when: _forgejo_users.stdout is not search('(?m)^\s*\d+\s+' ~ (forgejo_admin_username | regex_escape) ~ '\s')
+  no_log: true
+
+# SSO Pocket ID : configuré seulement si le client OIDC est renseigné dans vault.yml.
+# L'accès est filtré côté Pocket ID (groupes autorisés sur le client « Forgejo »),
+# Forgejo se contente de donner le statut admin au groupe forgejo_oidc_admin_group.
+- name: Configure Pocket ID auth source
+  when: forgejo_oidc_client_id is defined
+  block:
+    - name: List Forgejo auth sources
+      command: docker exec forgejo forgejo admin auth list
+      register: _forgejo_auth_sources
+      changed_when: false
+
+    - name: Find existing Pocket ID auth source ID
+      set_fact:
+        _forgejo_oidc_source_id: "{{ (_forgejo_auth_sources.stdout | regex_search('(?m)^(\\d+)\\s+pocket-id\\s', '\\1')) | default([''], true) | first }}"
+
+    # update-oauth réapplique la config à chaque run (le vault fait foi) : pas de détection de changement possible
+    - name: Create or update Pocket ID auth source
+      command:
+        argv: "{{ ['docker', 'exec', 'forgejo', 'forgejo', 'admin', 'auth']
+                  + (['update-oauth', '--id', _forgejo_oidc_source_id] if _forgejo_oidc_source_id else ['add-oauth'])
+                  + _forgejo_oidc_args }}"
+      vars:
+        _forgejo_oidc_args:
+          - --name
+          - pocket-id
+          - --provider
+          - openidConnect
+          - --key
+          - "{{ forgejo_oidc_client_id }}"
+          - --secret
+          - "{{ forgejo_oidc_client_secret }}"
+          - --auto-discover-url
+          - "https://auth.{{ traefik_domain }}/.well-known/openid-configuration"
+          - --scopes
+          - openid
+          - --scopes
+          - profile
+          - --scopes
+          - email
+          - --scopes
+          - groups
+          - --group-claim-name
+          - groups
+          - --admin-group
+          - "{{ forgejo_oidc_admin_group }}"
+          - --skip-local-2fa
+      changed_when: not _forgejo_oidc_source_id
+      no_log: true

@@ -1,0 +1,60 @@
+---
+- name: Create Pocket ID app directory
+  file:
+    path: /home/nostromo/apps/pocket-id
+    state: directory
+    owner: nostromo
+    group: nostromo
+    mode: '0755'
+
+- name: Create Pocket ID data directory (owner UID 1000 = PUID du container)
+  file:
+    path: /home/nostromo/data/pocket-id
+    state: directory
+    owner: '1000'
+    group: '1000'
+    mode: '0755'
+
+- name: Check if .env exists
+  stat:
+    path: /home/nostromo/apps/pocket-id/.env
+  register: pocket_id_env_stat
+
+- name: Generate Pocket ID encryption key
+  shell: openssl rand -base64 32
+  register: _encryption_key_raw
+  when: not pocket_id_env_stat.stat.exists
+  changed_when: false
+
+- name: Write .env file
+  copy:
+    content: |
+      ENCRYPTION_KEY={{ _encryption_key_raw.stdout }}
+    dest: /home/nostromo/apps/pocket-id/.env
+    owner: nostromo
+    group: nostromo
+    mode: '0600'
+  when: not pocket_id_env_stat.stat.exists
+
+- name: Get traefik_public subnet (pour TRUST_PROXY)
+  command: docker network inspect traefik_public -f "{% raw %}{{range .IPAM.Config}}{{.Subnet}}{{end}}{% endraw %}"
+  register: _traefik_subnet
+  changed_when: false
+
+- name: Deploy Pocket ID docker-compose
+  template:
+    src: docker-compose.yml.j2
+    dest: /home/nostromo/apps/pocket-id/docker-compose.yml
+    owner: nostromo
+    group: nostromo
+    mode: '0644'
+  vars:
+    traefik_public_subnet: "{{ _traefik_subnet.stdout }}"
+  notify: Restart Pocket ID
+
+- name: Start Pocket ID
+  command: docker compose up -d
+  args:
+    chdir: /home/nostromo/apps/pocket-id
+  register: compose_result
+  changed_when: "'Started' in compose_result.stdout or 'Created' in compose_result.stdout"
