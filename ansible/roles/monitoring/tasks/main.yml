@@ -1,0 +1,94 @@
+---
+- name: Check Grafana admin password (défini dans vault.yml)
+  assert:
+    that:
+      - grafana_admin_password is defined
+      - "\"'\" not in grafana_admin_password"
+    fail_msg: "Définir grafana_admin_password dans group_vars/all/vault.yml (sans apostrophe)"
+    quiet: true
+
+- name: Create monitoring app directory
+  file:
+    path: /home/nostromo/apps/monitoring
+    state: directory
+    owner: nostromo
+    group: nostromo
+    mode: '0755'
+
+- name: Create Prometheus data directory (owner UID 65534 = nobody, user du container)
+  file:
+    path: /home/nostromo/data/prometheus
+    state: directory
+    owner: '65534'
+    group: '65534'
+    mode: '0755'
+
+- name: Create Grafana data directory (owner UID 472 = user grafana du container)
+  file:
+    path: /home/nostromo/data/grafana
+    state: directory
+    owner: '472'
+    group: '0'
+    mode: '0755'
+
+# Sous-réseau fixe : node-exporter tourne sur le réseau de l'hôte et n'écoute que sur la passerelle de ce réseau
+- name: Create monitoring Docker network
+  command: docker network create --subnet {{ monitoring_subnet }} --gateway {{ monitoring_gateway }} monitoring
+  register: network_result
+  changed_when: network_result.rc == 0
+  failed_when:
+    - network_result.rc != 0
+    - "'already exists' not in network_result.stderr"
+
+- name: Allow Prometheus to scrape node-exporter
+  ufw:
+    rule: allow
+    from_ip: "{{ monitoring_subnet }}"
+    to_ip: "{{ monitoring_gateway }}"
+    port: "9100"
+    proto: tcp
+
+- name: Deploy Prometheus config
+  template:
+    src: prometheus.yml.j2
+    dest: /home/nostromo/apps/monitoring/prometheus.yml
+    owner: nostromo
+    group: nostromo
+    mode: '0644'
+  notify: Restart Prometheus
+
+- name: Deploy Grafana provisioning (datasource + dashboards)
+  copy:
+    src: grafana/
+    dest: /home/nostromo/apps/monitoring/grafana/
+    owner: nostromo
+    group: nostromo
+    mode: '0644'
+    directory_mode: '0755'
+  notify: Restart Grafana
+
+- name: Write .env file (secrets Grafana)
+  template:
+    src: env.j2
+    dest: /home/nostromo/apps/monitoring/.env
+    owner: nostromo
+    group: nostromo
+    mode: '0600'
+  no_log: true
+  notify: Restart monitoring
+
+- name: Deploy monitoring docker-compose
+  template:
+    src: docker-compose.yml.j2
+    dest: /home/nostromo/apps/monitoring/docker-compose.yml
+    owner: nostromo
+    group: nostromo
+    mode: '0644'
+  notify: Restart monitoring
+
+- name: Start monitoring
+  command: docker compose up -d
+  args:
+    chdir: /home/nostromo/apps/monitoring
+  register: compose_result
+  changed_when: "'Started' in compose_result.stdout or 'Created' in compose_result.stdout"

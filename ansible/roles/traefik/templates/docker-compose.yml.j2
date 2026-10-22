@@ -32,6 +32,10 @@ services:
       - --certificatesresolvers.letsencrypt-dns.acme.storage=/acme.json
       - --certificatesresolvers.letsencrypt-dns.acme.dnschallenge.provider=acme-dns
       - --certificatesresolvers.letsencrypt-dns.acme.dnschallenge.resolvers=1.1.1.1:53,8.8.8.8:53
+      # Métriques Prometheus sur un entrypoint dédié, joignable seulement depuis le réseau Docker (port non publié)
+      - --entrypoints.metrics.address=:8082
+      - --metrics.prometheus=true
+      - --metrics.prometheus.entrypoint=metrics
       - --api.dashboard=true
       - --log.level=INFO
       - --accesslog=true

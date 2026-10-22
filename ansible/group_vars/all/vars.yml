@@ -12,3 +12,12 @@ traefik_domain: "lambertini.space"
 # Groupe Pocket ID dont les membres sont admins de Forgejo : champ « Name » du groupe (minuscules), pas le « Friendly Name » affiché
 # Qui peut se connecter à Forgejo se règle dans Pocket ID : onglet « Access » du client OIDC « Forgejo »
 forgejo_oidc_admin_group: "devsecops"
+
+# Supervision (Grafana sur grafana.{{ traefik_domain }})
+# Groupe Pocket ID dont les membres sont admins de Grafana, les autres groupes autorisés sont Viewer
+# Qui peut se connecter à Grafana se règle dans Pocket ID : onglet « Access » du client OIDC « Grafana »
+grafana_oidc_admin_group: "devsecops"
+prometheus_retention: "30d"
+# Réseau Docker de la supervision : node-exporter (réseau de l'hôte) écoute uniquement sur la passerelle
+monitoring_subnet: "10.254.254.0/24"
+monitoring_gateway: "10.254.254.1"

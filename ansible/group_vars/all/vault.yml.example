@@ -13,3 +13,12 @@ forgejo_admin_password: "<ADMIN_PASSWORD>"
 # Callback URL : https://git.<domain>/user/oauth2/pocket-id/callback
 forgejo_oidc_client_id: "<POCKET_ID_CLIENT_ID>"
 forgejo_oidc_client_secret: "<POCKET_ID_CLIENT_SECRET>"
+
+# Compte admin local Grafana (secours si Pocket ID est indisponible)
+# Appliqué uniquement au premier démarrage : ensuite, le changer dans Grafana
+grafana_admin_password: "<GRAFANA_ADMIN_PASSWORD>"
+
+# SSO Grafana <-> Pocket ID (optionnel) : client OIDC « Grafana » créé dans Pocket ID
+# Callback URL : https://grafana.<domain>/login/generic_oauth
+grafana_oidc_client_id: "<POCKET_ID_CLIENT_ID>"
+grafana_oidc_client_secret: "<POCKET_ID_CLIENT_SECRET>"

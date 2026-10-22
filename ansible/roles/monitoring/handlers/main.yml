@@ -1,0 +1,15 @@
+---
+- name: Restart monitoring
+  command: docker compose up -d
+  args:
+    chdir: /home/nostromo/apps/monitoring
+
+- name: Restart Prometheus
+  command: docker compose restart prometheus
+  args:
+    chdir: /home/nostromo/apps/monitoring
+
+- name: Restart Grafana
+  command: docker compose restart grafana
+  args:
+    chdir: /home/nostromo/apps/monitoring

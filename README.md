@@ -91,6 +91,7 @@ Pointer les enregistrements A suivants vers l'IP du serveur :
 | `auth.<domain>` | Pocket ID (SSO OIDC, passkeys) |
 | `stacks.<domain>` | Dockhand |
 | `git.<domain>` | Forgejo |
+| `grafana.<domain>` | Grafana (supervision) |
 | `coder.<domain>` et `*.coder.<domain>` | Coder (interface + apps des workspaces) |
 
 ### Certificats wildcard (Coder)
@@ -140,6 +141,22 @@ Les inscriptions sont fermées, sauf via Pocket ID.
 Les membres du groupe `forgejo_oidc_admin_group` (`group_vars/all/vars.yml`) sont admins de Forgejo, les autres groupes autorisés sont utilisateurs normaux. Le statut admin est recalculé à chaque connexion.
 Tout est stocké dans `/home/nostromo/data/forgejo` (dépôts, base SQLite, `custom/conf/app.ini`) : c'est le dossier à sauvegarder.
 
+### 6. Supervision (Grafana)
+
+Stack `monitoring` : Prometheus (rétention `prometheus_retention`), node-exporter (hôte), cAdvisor (conteneurs) et Grafana. Traefik expose aussi ses métriques (requêtes, erreurs, expiration des certificats) sur un entrypoint interne.
+Seul Grafana est exposé, sur `https://grafana.<domain>`. Le dashboard *Nostromo — Infra* est provisionné depuis `roles/monitoring/files/grafana/dashboards/infra.json` : les modifications faites dans l'UI sont écrasées au déploiement, il faut exporter le JSON dans le repo.
+
+Renseigner `grafana_admin_password` dans le vault : ce compte local `admin` sert de secours si Pocket ID est indisponible.
+
+**SSO Pocket ID :**
+
+1. Dans Pocket ID, créer un client OIDC `Grafana` avec la callback `https://grafana.<domain>/login/generic_oauth` (PKCE activé).
+2. Dans l'onglet *Access* du client, autoriser les groupes qui ont accès à Grafana.
+3. Renseigner `grafana_oidc_client_id` et `grafana_oidc_client_secret` dans le vault, puis `make configure`.
+
+Les membres du groupe `grafana_oidc_admin_group` sont `Admin`, les autres groupes autorisés sont `Viewer`.
+Données : `/home/nostromo/data/grafana` (utilisateurs, préférences) et `/home/nostromo/data/prometheus` (métriques).
+
 ## Commandes disponibles
 
 ```bash
@@ -158,4 +175,4 @@ make ping        # vérifie la connectivité Ansible
 | `terraform/secret.tfvars` | Clés API Scaleway, IDs |
 | `terraform/terraform.tfvars` | IDs OS, zone |
 | `ansible/inventory.ini` | IP du serveur |
-| `ansible/group_vars/all/vault.yml` | Hash htpasswd Traefik, compte admin Forgejo |
+| `ansible/group_vars/all/vault.yml` | Hash htpasswd Traefik, compte admin Forgejo, admin Grafana, clients OIDC |

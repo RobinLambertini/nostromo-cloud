@@ -1,0 +1,29 @@
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  # Métriques de l'hôte (CPU, RAM, disques, réseau…)
+  - job_name: node
+    static_configs:
+      - targets: ["{{ monitoring_gateway }}:9100"]
+        labels:
+          instance: nostromo
+
+  # Métriques par conteneur
+  - job_name: cadvisor
+    static_configs:
+      - targets: ["cadvisor:8080"]
+        labels:
+          instance: nostromo
+
+  # Requêtes HTTP et certificats TLS (entrypoint « metrics », non exposé)
+  - job_name: traefik
+    static_configs:
+      - targets: ["traefik:8082"]
+        labels:
+          instance: nostromo
