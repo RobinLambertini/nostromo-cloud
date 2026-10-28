@@ -2,4 +2,4 @@
 - name: Restart Dockhand
   command: docker compose up -d
   args:
-    chdir: /opt/dockhand
+    chdir: /home/nostromo/apps/dockhand

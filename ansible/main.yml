@@ -3,12 +3,12 @@
   hosts: nostromo
   become: true
   roles:
-    - hardening
-    - docker
-    - users
-    - fail2ban
-    - traefik
-    - dockhand
-    - pocket_id
-    - forgejo
-    - monitoring
+    - { role: hardening,  tags: hardening }
+    - { role: docker,     tags: docker }
+    - { role: users,      tags: users }
+    - { role: fail2ban,   tags: fail2ban }
+    - { role: traefik,    tags: traefik }
+    - { role: dockhand,   tags: dockhand }
+    - { role: pocket_id,  tags: pocket_id }
+    - { role: forgejo,    tags: forgejo }
+    - { role: monitoring, tags: monitoring }
